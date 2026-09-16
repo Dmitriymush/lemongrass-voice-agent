@@ -33,12 +33,30 @@ export function validateAssistant(assistant) {
     fail("model.tools must include endCall — the assistant has to be able to end the call itself.");
   }
 
+  // The cold half of the knowledge base is only reachable through this tool. Without
+  // it the assistant cannot answer a single menu question and has no way to know that.
+  const query = tools.find((t) => t.type === "query");
+  if (!query) {
+    fail("model.tools must include the query tool — the cold half of the knowledge base would be unreachable.");
+  }
+
+  const kb = query.knowledgeBases?.[0];
+  if (!kb?.description) {
+    fail("the query tool's knowledge base needs a description — it is what the model routes on when deciding to search.");
+  }
+
+  // A search takes up to a second and a half. Without a spoken acknowledgement the
+  // guest hears silence and assumes the line dropped.
+  if (!query.messages?.some((m) => m.type === "request-start")) {
+    fail('the query tool needs a "request-start" message, or the guest hears silence while it searches.');
+  }
+
   // Termination is driven by a deterministic signal (the endCall tool), never by
   // matching words in the assistant's own speech. Phrase matching drops the line
   // when a farewell appears mid-conversation: "we close at ten, so have a good
   // evening" is not a goodbye. The silence and duration timeouts are the safety
   // net; a phrase list is neither a signal nor a net.
-  if (assistant.endCallPhrases !== undefined) {
+  if (Array.isArray(assistant.endCallPhrases) && assistant.endCallPhrases.length > 0) {
     fail(
       "endCallPhrases must not be set — it terminates the call by parsing the assistant's own text. " +
         "Use the endCall tool as the signal and the timeouts as the fallback."
@@ -93,6 +111,7 @@ export function validateAssistant(assistant) {
 export function assertDeployable(assistant) {
   validateAssistant(assistant);
 
+
   const walk = (node, path) => {
     if (typeof node === "string") {
       if (node.includes("REPLACE_")) fail(`${path} still contains a placeholder: "${node}"`);
@@ -104,5 +123,20 @@ export function assertDeployable(assistant) {
   };
 
   walk(assistant, "");
+  return assistant;
+}
+
+/**
+ * Last gate before the PATCH, once the upload has happened and its id is injected.
+ * Separate from assertDeployable because fileIds cannot exist before the upload —
+ * checking them pre-flight would reject every first deploy.
+ */
+export function assertKnowledgeBaseWired(assistant) {
+  const fileIds = assistant.model.tools.find((t) => t.type === "query")?.knowledgeBases?.[0]?.fileIds ?? [];
+
+  if (fileIds.length === 0) {
+    fail("the query tool has no fileIds — a tool that searches nothing answers nothing, and says so to no one.");
+  }
+
   return assistant;
 }

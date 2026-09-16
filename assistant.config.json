@@ -15,6 +15,23 @@
     "tools": [
       {
         "type": "endCall"
+      },
+      {
+        "type": "query",
+        "messages": [
+          {
+            "type": "request-start",
+            "content": "Let me check the menu for you."
+          }
+        ],
+        "knowledgeBases": [
+          {
+            "provider": "google",
+            "name": "lemongrass-menu",
+            "description": "Dish names, prices and descriptions from the Lemongrass Kitchen menu. Use for questions about a specific dish or what something costs.",
+            "fileIds": []
+          }
+        ]
       }
     ]
   },

@@ -25,7 +25,7 @@ let result;
 try {
   result = await deploy({
     assistant: JSON.parse(read("build/assistant.rendered.json")),
-    factSheet: read("kb/kb-fact-sheet.md"),
+    cold: read("build/kb-cold.txt"),
     env: process.env,
     state: previousState,
   });
@@ -42,8 +42,8 @@ writeFileSync(at(STATE_PATH), JSON.stringify(state, null, 2) + "\n");
 
 for (const action of actions) console.log(`  ${action}`);
 
-if (actions.includes("upload-fact-sheet")) {
-  console.log(`\n${STATE_PATH} changed (new file id ${state.factSheetFileId}) — commit it.`);
+if (actions.includes("upload-knowledge-base")) {
+  console.log(`\n${STATE_PATH} changed (new file id ${state.coldFileId}) — commit it.`);
 }
 
 console.log(`\nDeployed to assistant ${process.env.VAPI_ASSISTANT_ID}`);

@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { validateAssistant, assertDeployable } from "../scripts/lib/validate-assistant.mjs";
+import { validateAssistant, assertDeployable, assertKnowledgeBaseWired } from "../scripts/lib/validate-assistant.mjs";
 import { buildAssistant } from "../scripts/lib/build-assistant.mjs";
 
 /* ---------- fixtures ------------------------------------------------------ */
@@ -16,7 +16,16 @@ function validAssistant() {
       provider: "openai",
       model: "gpt-4.1-mini",
       messages: [{ role: "system", content: "You are the assistant." }],
-      tools: [{ type: "endCall" }],
+      tools: [
+        { type: "endCall" },
+        {
+          type: "query",
+          messages: [{ type: "request-start", content: "Let me check the menu for you." }],
+          knowledgeBases: [
+            { provider: "google", name: "menu", description: "Dishes, prices and descriptions.", fileIds: ["file_abc"] },
+          ],
+        },
+      ],
     },
     voice: {
       provider: "11labs",
@@ -75,6 +84,32 @@ describe("call hygiene", () => {
 
   test("2.2 requires the endCall tool — the assistant must be able to hang up", () => {
     assert.throws(() => validateAssistant(broken((a) => (a.model.tools = []))), /endCall/);
+  });
+
+  test("7.1 requires the query tool — without it the cold half is unreachable", () => {
+    assert.throws(
+      () => validateAssistant(broken((a) => (a.model.tools = a.model.tools.filter((t) => t.type !== "query")))),
+      /query/
+    );
+  });
+
+  test("7.2 requires a knowledge base with a description the model can route on", () => {
+    assert.throws(
+      () => validateAssistant(broken((a) => delete a.model.tools[1].knowledgeBases[0].description)),
+      /description/
+    );
+  });
+
+  test("7.3 requires a request-start message — a silent search reads as a dropped line", () => {
+    assert.throws(() => validateAssistant(broken((a) => delete a.model.tools[1].messages)), /request-start/);
+  });
+
+  test("7.2b the pre-PATCH gate rejects a query tool with no file behind it", () => {
+    assert.throws(
+      () => assertKnowledgeBaseWired(broken((a) => (a.model.tools[1].knowledgeBases[0].fileIds = []))),
+      /fileIds/,
+      "a tool that searches nothing answers nothing, and the failure is silent"
+    );
   });
 
   test("2.2b rejects endCallPhrases — termination must not be driven by what the assistant says", () => {

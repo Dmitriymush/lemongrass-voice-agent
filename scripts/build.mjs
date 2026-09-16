@@ -9,7 +9,7 @@
  *   prompt/*.md           (templates with {{MARKERS}})
  *   assistant.config.json (Vapi config with prompt placeholders)
  *        -> build/assistant.rendered.json   the assistant, hot core inlined
- *        -> build/kb-cold.md                the document uploaded to the knowledge base
+ *        -> build/kb-cold.txt                the document uploaded to the knowledge base
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -37,11 +37,14 @@ validateAssistant(assistant);
 
 mkdirSync(at("build"), { recursive: true });
 writeFileSync(at("build/assistant.rendered.json"), JSON.stringify(assistant, null, 2) + "\n");
-writeFileSync(at("build/kb-cold.md"), cold + "\n");
+// .txt, not .md: Vapi's file pipeline rejects text/markdown — an uploaded .md
+// reaches status "failed" with no error detail, while byte-identical content as
+// text/plain processes in seconds. Verified against the live API.
+writeFileSync(at("build/kb-cold.txt"), cold + "\n");
 
 console.log(
   `HOT  ${stats.hotSections} sections + ${stats.allergenLines} allergen line(s), ` +
     `${stats.hotTokens} tokens (cap ${stats.thresholdTokens})`
 );
-console.log(`COLD ${stats.coldSections} section(s), ${stats.coldTokens} tokens -> build/kb-cold.md`);
+console.log(`COLD ${stats.coldSections} section(s), ${stats.coldTokens} tokens -> build/kb-cold.txt`);
 console.log(`Prompt: ${stats.promptTokens} tokens`);
