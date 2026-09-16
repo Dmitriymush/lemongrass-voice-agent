@@ -12,6 +12,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { buildAssistant } from "./lib/build-assistant.mjs";
+import { validateAssistant } from "./lib/validate-assistant.mjs";
 
 const at = (p) => new URL(`../${p}`, import.meta.url);
 const read = (p) => readFileSync(at(p), "utf8");
@@ -23,6 +24,10 @@ const { assistant, stats } = buildAssistant({
   assistantConfig: JSON.parse(read("assistant.config.json")),
   readKbFile: (name) => read(`kb/${name}`),
 });
+
+// Structural contract. The placeholder gate (assertDeployable) runs at deploy time
+// instead, so a working tree without a chosen voice still builds.
+validateAssistant(assistant);
 
 mkdirSync(at("build"), { recursive: true });
 writeFileSync(at("build/assistant.rendered.json"), JSON.stringify(assistant, null, 2) + "\n");
