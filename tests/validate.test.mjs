@@ -153,8 +153,12 @@ describe("the real build output", () => {
   test("2.9 satisfies the contract", () => {
     const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
+    const kbConfig = JSON.parse(read("kb/kb.config.json"));
+
     const { assistant } = buildAssistant({
-      kbConfig: JSON.parse(read("kb/kb.config.json")),
+      kbConfig,
+      routing: JSON.parse(read("kb/routing.json")),
+      sourceFiles: kbConfig.sources,
       promptTemplate: read("prompt/system-prompt.md"),
       summaryPrompt: read("prompt/summary-prompt.md").trim(),
       assistantConfig: JSON.parse(read("assistant.config.json")),

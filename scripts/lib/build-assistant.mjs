@@ -11,53 +11,112 @@ function leadingTerm(entry) {
   return entry.split(/,|\bor\b/)[0].trim().toLowerCase();
 }
 
+/** Splits a markdown document into its `## ` sections, heading line included. */
+function parseSections(markdown) {
+  const found = [];
+  const re = /^##\s+(.+)$/gm;
+
+  let match;
+  let open = null;
+
+  while ((match = re.exec(markdown)) !== null) {
+    if (open) found.push({ ...open, end: match.index });
+    open = { title: match[1].trim(), start: match.index };
+  }
+  if (open) found.push({ ...open, end: markdown.length });
+
+  return found.map(({ title, start, end }) => ({ title, text: markdown.slice(start, end).trim() }));
+}
+
 /**
- * Assembles the deployable Vapi assistant from its sources.
+ * Assembles the deployable Vapi assistant and the document that backs its knowledge base.
  *
- * Pure: every input is passed in, nothing is read from disk. `readKbFile` resolves
- * a name from `kbConfig.sources` to its contents.
+ * The fact sheet is never edited. It is split at build time by declarative rules
+ * (kb/routing.json) into:
  *
- * Throws rather than warns. A build that silently produces a subtly wrong assistant
- * is worse than one that stops — see docs/ARCHITECTURE.md §8.2.
+ *   HOT  — inlined into the system prompt: asked in most calls, or costly to get
+ *          wrong, or behaviour rather than fact
+ *   COLD — written out for upload to Vapi and reached through the query tool:
+ *          grows with the business, and a miss is merely inconvenient
+ *
+ * Allergen lines are lifted verbatim out of cold sections into the hot prompt. Missing
+ * a price is an inconvenience; missing "does the pad thai contain peanuts" is an
+ * incident, and data whose error has a health cost does not belong behind a
+ * probabilistic lookup. See docs/ARCHITECTURE.md §4.3.
+ *
+ * Throws rather than warns: a build that silently ships a subtly wrong assistant is
+ * worse than one that stops.
  */
-export function buildAssistant({ kbConfig, promptTemplate, summaryPrompt, assistantConfig, readKbFile }) {
-  const { mode, inlineThresholdTokens } = kbConfig.grounding;
-  const { hot = [], cold = [] } = kbConfig.sources;
+export function buildAssistant({
+  kbConfig,
+  routing,
+  sourceFiles,
+  promptTemplate,
+  summaryPrompt,
+  assistantConfig,
+  readKbFile,
+}) {
+  const { mode, hotThresholdTokens } = kbConfig.grounding;
 
-  if (mode === "inline" && cold.length > 0) {
+  if (mode !== "hybrid") {
     throw new Error(
-      `grounding.mode is "inline" but sources.cold lists ${cold.length} file(s). ` +
-        `Cold sources are only reachable through retrieval — they would be silently ignored.`
+      `grounding.mode "${mode}" is not implemented. Inline-only grounding was superseded — see docs/ARCHITECTURE.md §5 (ADR-001).`
     );
   }
 
-  if (mode !== "inline") {
-    throw new Error(
-      `grounding.mode "${mode}" is documented but not implemented. See docs/ARCHITECTURE.md §9.5.`
-    );
+  if (!sourceFiles?.length) throw new Error("No knowledge sources listed — the assistant would have no facts at all.");
+
+  const knowledge = sourceFiles.map(readKbFile).join("\n\n").trim();
+  const sections = parseSections(knowledge);
+
+  if (sections.length === 0) {
+    throw new Error("No '## ' headings found in the knowledge sources — nothing to route.");
   }
 
-  if (hot.length === 0) {
-    throw new Error("sources.hot is empty — the assistant would have no facts at all.");
+  /* -- routing --------------------------------------------------------------- */
+  // An unrouted section is a new part of the fact sheet nobody classified. Defaulting
+  // it either way is a silent decision about whether guests can be told about it.
+
+  const hot = [];
+  const cold = [];
+
+  for (const section of sections) {
+    const destination = routing.sections[section.title];
+
+    if (destination === undefined) {
+      throw new Error(
+        `Section "${section.title}" is not in kb/routing.json. Classify it as "hot" or "cold" — see docs/ARCHITECTURE.md §4.2.`
+      );
+    }
+    if (destination !== "hot" && destination !== "cold") {
+      throw new Error(`Section "${section.title}" is routed to "${destination}"; only "hot" and "cold" exist.`);
+    }
+
+    (destination === "hot" ? hot : cold).push(section);
   }
 
-  const knowledge = hot.map(readKbFile).join("\n\n").trim();
+  const hotText = hot.map((s) => s.text).join("\n\n");
+  const coldText = cold.map((s) => s.text).join("\n\n");
 
-  /* -- scope manifest: generated, so it cannot drift from the facts ---------- */
+  /* -- allergen matrix ------------------------------------------------------- */
+  // Copied as-is, price and all. A tidier extraction would eventually cut the wrong
+  // part of a line, and the failure would be silent and unsafe.
 
-  const headings = [...knowledge.matchAll(/^##\s+(.+)$/gm)].map((m) => m[1].trim());
+  const marker = routing.extractToHot.matching;
+  const allergenMatrix = coldText
+    .split("\n")
+    .filter((line) => line.includes(marker))
+    .join("\n");
 
-  if (headings.length === 0) {
-    throw new Error("No '## ' headings found in the knowledge sources — cannot build a scope manifest.");
-  }
+  /* -- scope manifest -------------------------------------------------------- */
+  // Generated from every section, hot and cold alike: the assistant must know which
+  // topics it can look up, not only the ones it already holds.
 
-  const topics = headings.map((h) => kbConfig.scope.headingAliases[h] ?? h.toLowerCase());
+  const topics = sections.map((s) => routing.headingAliases?.[s.title] ?? kbConfig.scope.headingAliases[s.title] ?? s.title.toLowerCase());
   const scopeManifest = topics.map((t) => `- ${t}`).join("\n");
 
-  /* -- anti-examples: the one part that cannot be generated ------------------ */
-  // They are by definition what the sources do not contain, so they are hand-written
-  // — and therefore need guarding against drifting into a topic we actually cover.
-
+  // Anti-examples cannot be generated — they are by definition what the sources do
+  // not contain — so they are hand-written and need guarding against drift.
   const haystack = knowledge.toLowerCase();
 
   for (const entry of kbConfig.scope.notCovered) {
@@ -71,22 +130,22 @@ export function buildAssistant({ kbConfig, promptTemplate, summaryPrompt, assist
 
   const notCovered = kbConfig.scope.notCovered.map((t) => `- ${t}`).join("\n");
 
-  /* -- grounding rule: docs/ARCHITECTURE.md §4.3 ---------------------------- */
+  /* -- threshold on the hot core -------------------------------------------- */
 
-  const kbTokens = encode(knowledge).length;
+  const hotTokens = encode(`${hotText}\n${allergenMatrix}`).length;
 
-  if (kbTokens > inlineThresholdTokens) {
+  if (hotTokens > hotThresholdTokens) {
     throw new Error(
-      `Knowledge base is ${kbTokens} tokens, over the ${inlineThresholdTokens}-token inline threshold. ` +
-        `Inline grounding is no longer the cheaper option at this size. ` +
-        `See docs/ARCHITECTURE.md §9 and pick a grounding mode deliberately.`
+      `Hot core is ${hotTokens} tokens, over the ${hotThresholdTokens}-token threshold. ` +
+        `It is carried on every turn of every call. Move something to cold — see docs/ARCHITECTURE.md §10.`
     );
   }
 
   /* -- render ---------------------------------------------------------------- */
 
   const systemPrompt = promptTemplate
-    .replace("{{KNOWLEDGE_BASE}}", knowledge)
+    .replace("{{HOT_KNOWLEDGE}}", hotText)
+    .replace("{{ALLERGEN_MATRIX}}", allergenMatrix)
     .replace("{{SCOPE_MANIFEST}}", scopeManifest)
     .replace("{{NOT_COVERED}}", notCovered)
     .replace("{{CURRENT_DATE}}", CURRENT_DATE_EXPR);
@@ -102,11 +161,15 @@ export function buildAssistant({ kbConfig, promptTemplate, summaryPrompt, assist
 
   return {
     assistant,
+    cold: coldText,
     stats: {
-      sources: hot.length,
-      sections: headings.length,
-      kbTokens,
-      thresholdTokens: inlineThresholdTokens,
+      sources: sourceFiles.length,
+      hotSections: hot.length,
+      coldSections: cold.length,
+      allergenLines: allergenMatrix ? allergenMatrix.split("\n").length : 0,
+      hotTokens,
+      coldTokens: encode(coldText).length,
+      thresholdTokens: hotThresholdTokens,
       promptTokens: encode(systemPrompt).length,
     },
   };

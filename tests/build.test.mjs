@@ -3,31 +3,34 @@ import assert from "node:assert/strict";
 
 import { buildAssistant } from "../scripts/lib/build-assistant.mjs";
 
-/* ---------- fixtures ------------------------------------------------------ */
+/**
+ * Rendering and source handling. The hot/cold split itself, the scope manifest and
+ * the hot-core threshold are covered in split.test.mjs.
+ */
 
 const FACT_SHEET = `# Test Kitchen — Fact Sheet
 
 ## Opening hours
 
 - Monday: closed
-- Tuesday to Sunday: 5 pm to 10 pm
 
 ## Menu highlights and prices
 
 - Pad thai: 19 dollars. Contains peanuts.
-
-## Other
-
-- Dress code: casual.
 `;
 
-const PROMPT_TEMPLATE = `## Identity
+const ROUTING = {
+  sections: { "Opening hours": "hot", "Menu highlights and prices": "cold" },
+  extractToHot: { matching: "Contains" },
+};
 
-You are an assistant.
+const PROMPT_TEMPLATE = `<hot_knowledge>
+{{HOT_KNOWLEDGE}}
+</hot_knowledge>
 
-<knowledge_base>
-{{KNOWLEDGE_BASE}}
-</knowledge_base>
+<allergen_matrix>
+{{ALLERGEN_MATRIX}}
+</allergen_matrix>
 
 <covered_topics>
 {{SCOPE_MANIFEST}}
@@ -48,7 +51,6 @@ const ASSISTANT_CONFIG = {
     messages: [{ role: "system", content: "{{SYSTEM_PROMPT}}" }],
     tools: [{ type: "endCall" }],
   },
-  voice: { provider: "11labs", voiceId: "abc123" },
   analysisPlan: {
     summaryPlan: {
       enabled: true,
@@ -61,23 +63,20 @@ const ASSISTANT_CONFIG = {
 };
 
 const KB_CONFIG = {
-  grounding: { mode: "inline", inlineThresholdTokens: 580 },
-  sources: { hot: ["fact-sheet.md"], cold: [] },
-  scope: {
-    headingAliases: { Other: "dress code" },
-    notCovered: ["corkage or BYOB fees", "Wi-Fi"],
-  },
+  grounding: { mode: "hybrid", hotThresholdTokens: 600 },
+  scope: { headingAliases: {}, notCovered: ["corkage or BYOB fees", "Wi-Fi"] },
 };
 
-/** Builds with the default fixtures, overriding any slice of the input. */
 function build(overrides = {}) {
   const files = { "fact-sheet.md": FACT_SHEET, ...(overrides.files ?? {}) };
 
   return buildAssistant({
     kbConfig: structuredClone({ ...KB_CONFIG, ...(overrides.kbConfig ?? {}) }),
+    routing: structuredClone(overrides.routing ?? ROUTING),
+    sourceFiles: overrides.sourceFiles ?? ["fact-sheet.md"],
     promptTemplate: overrides.promptTemplate ?? PROMPT_TEMPLATE,
     summaryPrompt: overrides.summaryPrompt ?? "Summarise the call.",
-    assistantConfig: structuredClone(overrides.assistantConfig ?? ASSISTANT_CONFIG),
+    assistantConfig: structuredClone(ASSISTANT_CONFIG),
     readKbFile: (name) => {
       if (!(name in files)) throw new Error(`fixture missing: ${name}`);
       return files[name];
@@ -85,82 +84,35 @@ function build(overrides = {}) {
   });
 }
 
-const systemPromptOf = (result) => result.assistant.model.messages[0].content;
+const promptOf = (r) => r.assistant.model.messages[0].content;
 
-/* ---------- 1.1–1.2  scope manifest --------------------------------------- */
+/* -------------------------------------------------------------------------- */
 
-describe("scope manifest", () => {
-  test("1.1 contains one entry per '##' heading in the fact sheet", () => {
-    const prompt = systemPromptOf(build());
-
-    assert.match(prompt, /- opening hours/);
-    assert.match(prompt, /- menu highlights and prices/);
-  });
-
-  test("1.2 applies the alias for an unhelpful heading", () => {
-    const prompt = systemPromptOf(build());
-
-    assert.match(prompt, /- dress code/, "alias should replace the heading");
-    assert.doesNotMatch(prompt, /- other$/m, "raw 'Other' is useless as a topic name");
-  });
-
-  test("1.3 refuses to build when a notCovered entry is present in the fact sheet", () => {
+describe("anti-examples", () => {
+  test("1.3 refuses to build when a notCovered entry is present in the sources", () => {
     assert.throws(
-      () =>
-        build({
-          kbConfig: {
-            scope: { ...KB_CONFIG.scope, notCovered: ["pad thai"] },
-          },
-        }),
+      () => build({ kbConfig: { scope: { headingAliases: {}, notCovered: ["pad thai"] } } }),
       /pad thai/i,
       "listing a covered topic as not-covered would make the assistant deny a fact it has"
     );
   });
 });
 
-/* ---------- 1.4  grounding rule ------------------------------------------- */
-
-describe("grounding rule", () => {
-  test("1.4 refuses to build when the KB exceeds the inline threshold", () => {
-    assert.throws(
-      () => build({ kbConfig: { grounding: { mode: "inline", inlineThresholdTokens: 10 } } }),
-      /threshold/i
-    );
-  });
-
-  test("1.4b reports the measured token count so the tripwire is observable", () => {
-    const { stats } = build();
-
-    assert.ok(stats.kbTokens > 0, "kbTokens must be measured, not assumed");
-    assert.equal(stats.thresholdTokens, 580);
-  });
-});
-
-/* ---------- 1.5–1.7  rendering -------------------------------------------- */
-
 describe("rendering", () => {
   test("1.5 refuses to build when a marker is left unsubstituted", () => {
-    assert.throws(
-      () => build({ promptTemplate: PROMPT_TEMPLATE + "\n{{UNKNOWN_MARKER}}\n" }),
-      /UNKNOWN_MARKER/
-    );
+    assert.throws(() => build({ promptTemplate: PROMPT_TEMPLATE + "\n{{UNKNOWN_MARKER}}\n" }), /UNKNOWN_MARKER/);
   });
 
   test("1.6 renders CURRENT_DATE as a runtime expression, not the build date", () => {
-    const prompt = systemPromptOf(build());
+    const prompt = promptOf(build());
     const thisYear = String(new Date().getFullYear());
 
     assert.match(prompt, /\{\{"now" \| date:/, "must stay a LiquidJS expression Vapi evaluates per call");
     assert.doesNotMatch(prompt, new RegExp(`Today is [^\\n]*${thisYear}`), "build date must not be baked in");
   });
 
-  test("1.7 embeds the fact sheet verbatim", () => {
-    const prompt = systemPromptOf(build());
-
-    assert.ok(
-      prompt.includes("- Pad thai: 19 dollars. Contains peanuts."),
-      "facts must reach the model unmodified"
-    );
+  test("1.7 embeds hot facts verbatim", () => {
+    assert.ok(promptOf(build()).includes("- Monday: closed"), "facts must reach the model unmodified");
   });
 
   test("1.7b substitutes the summary prompt into the analysis plan", () => {
@@ -171,37 +123,25 @@ describe("rendering", () => {
   });
 });
 
-/* ---------- 1.8–1.9  sources ---------------------------------------------- */
-
 describe("sources", () => {
-  test("1.8 reads every file listed in sources.hot", () => {
-    const prompt = systemPromptOf(
-      build({
-        files: { "extra.md": "## Parking\n\n- Free after 6 pm.\n" },
-        kbConfig: { sources: { hot: ["fact-sheet.md", "extra.md"], cold: [] } },
-      })
-    );
+  test("1.8 reads every listed source file", () => {
+    const { assistant } = build({
+      files: { "extra.md": "## Parking\n\n- Free after 6 pm.\n" },
+      sourceFiles: ["fact-sheet.md", "extra.md"],
+      routing: { ...ROUTING, sections: { ...ROUTING.sections, Parking: "hot" } },
+    });
 
-    assert.ok(prompt.includes("- Free after 6 pm."), "second hot source must be included");
-    assert.match(prompt, /- parking/, "its headings must reach the scope manifest too");
+    assert.ok(assistant.model.messages[0].content.includes("- Free after 6 pm."));
   });
 
-  test("1.9 refuses to build when cold sources exist but mode is still inline", () => {
-    assert.throws(
-      () =>
-        build({
-          files: { "menu.md": "## Full menu\n\n- Many dishes.\n" },
-          kbConfig: { sources: { hot: ["fact-sheet.md"], cold: ["menu.md"] } },
-        }),
-      /cold/i,
-      "mode and data must not diverge silently"
-    );
+  test("1.8b fails when there are no sources at all", () => {
+    assert.throws(() => build({ sourceFiles: [] }), /no knowledge sources/i);
   });
 
-  test("1.9b rejects a grounding mode that is documented but not implemented", () => {
+  test("1.9 rejects the superseded inline-only mode and says where to read why", () => {
     assert.throws(
-      () => build({ kbConfig: { grounding: { mode: "hybrid", inlineThresholdTokens: 580 } } }),
-      /not implemented/i
+      () => build({ kbConfig: { grounding: { mode: "inline", hotThresholdTokens: 600 } } }),
+      /ADR-001|superseded/i
     );
   });
 });

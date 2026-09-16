@@ -1,0 +1,17 @@
+{
+  "_comment": "Where each section of kb-fact-sheet.md goes. See docs/ARCHITECTURE.md 4.2 for the rule: how often it is asked, what a miss costs, whether it grows. The fact sheet itself is never edited.",
+
+  "sections": {
+    "Contact and location": "hot",
+    "Opening hours": "hot",
+    "Menu highlights and prices": "cold",
+    "Dietary information": "hot",
+    "Reservations and groups": "hot",
+    "Other": "hot"
+  },
+
+  "extractToHot": {
+    "matching": "Contains",
+    "_comment": "Allergen lines are copied verbatim out of cold sections into the hot prompt, price included. Missing a price is an inconvenience; missing 'does the pad thai contain peanuts' is an incident. See ARCHITECTURE 4.3."
+  }
+}

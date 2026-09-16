@@ -1,15 +1,11 @@
 {
   "grounding": {
-    "mode": "inline",
-    "inlineThresholdTokens": 580,
-    "_comment": "Derived in docs/ARCHITECTURE.md 4.3: K* = Q*(C+R)/T. Build fails when measured K exceeds this and mode is still 'inline'."
+    "mode": "hybrid",
+    "hotThresholdTokens": 600,
+    "_comment": "The hot core is carried on every turn of every call, so it is capped. Crossing this means the split needs revisiting, not that the cap needs raising. See ARCHITECTURE 10."
   },
 
-  "sources": {
-    "hot": ["kb-fact-sheet.md"],
-    "cold": [],
-    "_comment": "hot = inlined into the system prompt. cold = reached through retrieval, only valid once grounding.mode leaves 'inline'. See docs/ARCHITECTURE.md 9.6."
-  },
+  "sources": ["kb-fact-sheet.md"],
 
   "scope": {
     "headingAliases": {
@@ -29,6 +25,6 @@
       "job openings"
     ],
 
-    "_comment": "notCovered cannot be derived from the fact sheet - it is by definition what the fact sheet does not contain. Every entry must be absent from kb-fact-sheet.md; anything the sheet does address (private events, phone-only reservations) must never be listed here."
+    "_comment": "notCovered cannot be derived from the fact sheet - it is by definition what the fact sheet does not contain. With retrieval this matters more, not less: a lookup always returns something, so 'not covered' has to be settled before any search happens. See ARCHITECTURE 4.5."
   }
 }
