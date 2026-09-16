@@ -76,6 +76,14 @@ describe("call hygiene", () => {
   test("2.2 requires the endCall tool — the assistant must be able to hang up", () => {
     assert.throws(() => validateAssistant(broken((a) => (a.model.tools = []))), /endCall/);
   });
+
+  test("2.2b rejects endCallPhrases — termination must not be driven by what the assistant says", () => {
+    assert.throws(
+      () => validateAssistant(broken((a) => (a.endCallPhrases = ["goodbye", "have a good evening"]))),
+      /endCallPhrases/,
+      'a guest calling at 21:00 hears "we close at ten, so have a good evening" and the line drops mid-conversation'
+    );
+  });
 });
 
 /* ---------- 2.3–2.4  end-of-call capture ---------------------------------- */

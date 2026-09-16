@@ -33,6 +33,18 @@ export function validateAssistant(assistant) {
     fail("model.tools must include endCall — the assistant has to be able to end the call itself.");
   }
 
+  // Termination is driven by a deterministic signal (the endCall tool), never by
+  // matching words in the assistant's own speech. Phrase matching drops the line
+  // when a farewell appears mid-conversation: "we close at ten, so have a good
+  // evening" is not a goodbye. The silence and duration timeouts are the safety
+  // net; a phrase list is neither a signal nor a net.
+  if (assistant.endCallPhrases !== undefined) {
+    fail(
+      "endCallPhrases must not be set — it terminates the call by parsing the assistant's own text. " +
+        "Use the endCall tool as the signal and the timeouts as the fallback."
+    );
+  }
+
   /* -- end-of-call capture: the only place reservation details survive ------- */
 
   const summaryPlan = assistant.analysisPlan?.summaryPlan;

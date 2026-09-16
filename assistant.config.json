@@ -1,9 +1,7 @@
 {
   "name": "Dmytro — Lemongrass Kitchen (inbound)",
-
   "firstMessage": "Lemongrass Kitchen, this is the front desk. How can I help?",
   "firstMessageMode": "assistant-speaks-first",
-
   "model": {
     "provider": "openai",
     "model": "gpt-4.1-mini",
@@ -20,13 +18,17 @@
       }
     ]
   },
-
   "transcriber": {
     "provider": "deepgram",
     "model": "nova-3",
     "language": "en",
     "smartFormat": true,
-    "keywords": ["Lemongrass:3", "massaman:5", "tamarind:5", "papaya:3"],
+    "keywords": [
+      "Lemongrass:3",
+      "massaman:5",
+      "tamarind:5",
+      "papaya:3"
+    ],
     "keyterm": [
       "pad thai",
       "green curry",
@@ -39,7 +41,6 @@
       "high chair"
     ]
   },
-
   "voice": {
     "provider": "vapi",
     "voiceId": "Elliot",
@@ -48,11 +49,16 @@
       "enabled": true,
       "formatPlan": {
         "enabled": true,
-        "formattersEnabled": ["phoneNumber", "dollarAmount", "time", "date", "number"]
+        "formattersEnabled": [
+          "phoneNumber",
+          "dollarAmount",
+          "time",
+          "date",
+          "number"
+        ]
       }
     }
   },
-
   "startSpeakingPlan": {
     "waitSeconds": 0.4,
     "smartEndpointingPlan": {
@@ -65,18 +71,13 @@
       "onNumberSeconds": 0.5
     }
   },
-
   "stopSpeakingPlan": {
     "numWords": 0,
     "voiceSeconds": 0.2,
     "backoffSeconds": 1
   },
-
   "silenceTimeoutSeconds": 30,
   "maxDurationSeconds": 600,
-
-  "endCallPhrases": ["goodbye", "bye now", "have a good evening", "thanks for calling"],
-
   "hooks": [
     {
       "on": "customer.speech.timeout",
@@ -92,12 +93,13 @@
         },
         {
           "type": "tool",
-          "tool": { "type": "endCall" }
+          "tool": {
+            "type": "endCall"
+          }
         }
       ]
     }
   ],
-
   "analysisPlan": {
     "summaryPlan": {
       "enabled": true,
@@ -113,27 +115,49 @@
         }
       ]
     },
-
     "structuredDataPlan": {
       "enabled": true,
       "schema": {
         "type": "object",
         "properties": {
-          "reservationRequested": { "type": "boolean" },
-          "guestName": { "type": "string" },
-          "phoneNumber": { "type": "string" },
-          "partySize": { "type": "number" },
-          "date": { "type": "string" },
-          "time": { "type": "string" },
-          "notes": { "type": "string" },
-          "allergyMentioned": { "type": "string" },
-          "callbackRequested": { "type": "boolean" },
+          "reservationRequested": {
+            "type": "boolean"
+          },
+          "guestName": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "partySize": {
+            "type": "number"
+          },
+          "date": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "allergyMentioned": {
+            "type": "string"
+          },
+          "callbackRequested": {
+            "type": "boolean"
+          },
           "unansweredQuestions": {
             "type": "array",
-            "items": { "type": "string" }
+            "items": {
+              "type": "string"
+            }
           }
         },
-        "required": ["reservationRequested", "callbackRequested"]
+        "required": [
+          "reservationRequested",
+          "callbackRequested"
+        ]
       }
     }
   }
