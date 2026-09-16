@@ -4,9 +4,10 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
-    "deploy": "node scripts/deploy.mjs",
-    "eval": "node scripts/eval.mjs",
-    "test": "node --test tests/"
+    "deploy": "node --env-file-if-exists=.env scripts/deploy.mjs",
+    "eval": "node --env-file-if-exists=.env scripts/eval.mjs",
+    "test": "node --test tests/",
+    "env:check": "node --env-file-if-exists=.env scripts/env-check.mjs"
   },
   "dependencies": {
     "gpt-tokenizer": "^2.9.0",
