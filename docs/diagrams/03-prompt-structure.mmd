@@ -1,0 +1,19 @@
+flowchart TD
+    subgraph STABLE["Стабільний префікс — кешується всі 20 turn-ів"]
+        S1["1. Identity and style<br/>короткі репліки, без монологів"]
+        S2["2. knowledge_base<br/>фактшит ДОСЛІВНО"]
+        S3["3. scope<br/>перелік покритих тем + anti-examples"]
+        S4["4. Grounding rules"]
+        S5["5. Allergen policy"]
+        S6["6. Reservation flow"]
+        S7["7. Banned phrases"]
+        S8["8. Role lock"]
+        S9["9. Call closure"]
+        S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9
+    end
+
+    S9 --> V["10. Поточна дата<br/>LiquidJS, America/New_York"]
+    V --> H["Історія діалогу"]
+
+    style STABLE fill:#1b4332,color:#fff
+    style V fill:#9c6644,color:#fff

@@ -1,0 +1,15 @@
+flowchart TD
+    S["Де тримати знання?"] --> W{"Дозволені вебхуки?"}
+    W -->|"ні — умова ТЗ"| K{"Розмір корпусу K"}
+    W -->|"так"| EXT["Зовнішній RAG<br/>поза межами завдання"]
+
+    K -->|"K < 580 тк<br/>зараз 520"| INL["Inline у системному промпті"]
+    K -->|"580 тк – 5k"| CMP["Inline + ущільнення формату"]
+    K -->|"5k – 50k"| HYB["Гібрид: hot inline / cold query tool"]
+    K -->|"> 50k"| RAG["Повний retrieval<br/>topic-scoped KB"]
+
+    INL --> DEC["ОБРАНО"]
+
+    style DEC fill:#2d6a4f,color:#fff
+    style INL fill:#40916c,color:#fff
+    style EXT fill:#6c757d,color:#fff

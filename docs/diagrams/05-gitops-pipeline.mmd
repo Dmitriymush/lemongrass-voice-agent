@@ -1,0 +1,24 @@
+flowchart TD
+    KB["kb/kb-fact-sheet.md"] --> B["build.mjs"]
+    P["prompt/system-prompt.md"] --> B
+    C["assistant.config.json"] --> B
+
+    B --> TOK{"K > 580 токенів?"}
+    TOK -->|"так"| WARN["CI warning:<br/>див. README Scaling"]
+    TOK -->|"ні"| R["build/assistant.rendered.json"]
+    WARN --> R
+
+    R --> BR{"Гілка"}
+
+    BR -->|"PR"| PR1["schema lint"]
+    PR1 --> PR2["eval.mjs<br/>2 сценарії, Chat API"]
+    PR2 -->|"fail"| BLOCK["Мердж заблоковано"]
+    PR2 -->|"pass"| REV["Ревʼю"]
+
+    BR -->|"main"| M1["eval.mjs"]
+    M1 --> M2["deploy.mjs<br/>PATCH /assistant/:id"]
+    M2 --> M3["smoke check"]
+    M3 --> VAPI["Vapi sandbox"]
+
+    style BLOCK fill:#9d0208,color:#fff
+    style VAPI fill:#2d6a4f,color:#fff

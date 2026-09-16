@@ -1,0 +1,14 @@
+{
+  "name": "lemongrass-voice-agent",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "eval": "node scripts/eval.mjs",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "gpt-tokenizer": "^2.9.0"
+  }
+}

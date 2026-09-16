@@ -1,0 +1,11 @@
+flowchart LR
+    T0["до 600 тк<br/>ЗАРАЗ: 485<br/>inline"]
+    T1["600 тк – 5k<br/>inline<br/>+ ущільнення формату"]
+    T2["5k – 50k<br/>гібрид<br/>hot inline / cold retrieval"]
+    T3["понад 50k<br/>повний retrieval<br/>topic-scoped KB"]
+
+    T0 -->|"кост-поріг"| T1
+    T1 -->|"cold start"| T2
+    T2 -->|"TTFT"| T3
+
+    style T0 fill:#2d6a4f,color:#fff

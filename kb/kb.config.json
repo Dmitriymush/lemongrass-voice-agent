@@ -1,0 +1,34 @@
+{
+  "grounding": {
+    "mode": "inline",
+    "inlineThresholdTokens": 580,
+    "_comment": "Derived in docs/ARCHITECTURE.md 4.3: K* = Q*(C+R)/T. Build fails when measured K exceeds this and mode is still 'inline'."
+  },
+
+  "sources": {
+    "hot": ["kb-fact-sheet.md"],
+    "cold": [],
+    "_comment": "hot = inlined into the system prompt. cold = reached through retrieval, only valid once grounding.mode leaves 'inline'. See docs/ARCHITECTURE.md 9.6."
+  },
+
+  "scope": {
+    "headingAliases": {
+      "Other": "dress code, children and high chairs, payment methods, wheelchair accessibility"
+    },
+
+    "notCovered": [
+      "corkage or BYOB fees",
+      "delivery or takeout",
+      "the wine, beer or cocktail list",
+      "Wi-Fi",
+      "gift cards",
+      "loyalty or rewards programs",
+      "catering prices",
+      "live music or entertainment schedule",
+      "outdoor or patio seating",
+      "job openings"
+    ],
+
+    "_comment": "notCovered cannot be derived from the fact sheet - it is by definition what the fact sheet does not contain. Every entry must be absent from kb-fact-sheet.md; anything the sheet does address (private events, phone-only reservations) must never be listed here."
+  }
+}

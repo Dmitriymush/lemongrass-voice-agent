@@ -1,0 +1,140 @@
+{
+  "name": "REPLACE_WITH_YOUR_NAME — Lemongrass Kitchen (inbound)",
+
+  "firstMessage": "Lemongrass Kitchen, this is the front desk. How can I help?",
+  "firstMessageMode": "assistant-speaks-first",
+
+  "model": {
+    "provider": "openai",
+    "model": "gpt-4.1-mini",
+    "temperature": 0.2,
+    "messages": [
+      {
+        "role": "system",
+        "content": "{{SYSTEM_PROMPT}}"
+      }
+    ],
+    "tools": [
+      {
+        "type": "endCall"
+      }
+    ]
+  },
+
+  "transcriber": {
+    "provider": "deepgram",
+    "model": "nova-3",
+    "language": "en",
+    "smartFormat": true,
+    "keywords": ["Lemongrass:3", "massaman:5", "tamarind:5", "papaya:3"],
+    "keyterm": [
+      "pad thai",
+      "green curry",
+      "massaman beef curry",
+      "crispy sea bass",
+      "mango sticky rice",
+      "Harbor Street",
+      "Fore Street",
+      "gluten free",
+      "high chair"
+    ]
+  },
+
+  "voice": {
+    "provider": "11labs",
+    "voiceId": "REPLACE_AFTER_VOICE_SELECTION",
+    "model": "eleven_flash_v2_5",
+    "chunkPlan": {
+      "enabled": true,
+      "formatPlan": {
+        "enabled": true,
+        "formattersEnabled": ["phoneNumber", "dollarAmount", "time", "date", "number"]
+      }
+    }
+  },
+
+  "startSpeakingPlan": {
+    "waitSeconds": 0.4,
+    "smartEndpointingPlan": {
+      "provider": "livekit",
+      "waitFunction": "t < 30 ? (x * 500 + 300) : (20 + 500 * sqrt(x) + 2500 * x^3)"
+    },
+    "transcriptionEndpointingPlan": {
+      "onPunctuationSeconds": 0.1,
+      "onNoPunctuationSeconds": 1.5,
+      "onNumberSeconds": 0.5
+    }
+  },
+
+  "stopSpeakingPlan": {
+    "numWords": 0,
+    "voiceSeconds": 0.2,
+    "backoffSeconds": 1
+  },
+
+  "silenceTimeoutSeconds": 30,
+  "maxDurationSeconds": 600,
+
+  "endCallPhrases": ["goodbye", "bye now", "have a good evening", "thanks for calling"],
+
+  "hooks": [
+    {
+      "on": "customer.speech.timeout",
+      "options": {
+        "timeoutSeconds": 15,
+        "triggerMaxCount": 2,
+        "triggerResetMode": "onUserSpeech"
+      },
+      "do": [
+        {
+          "type": "say",
+          "exact": "I'll let you go for now. Please call back any time."
+        },
+        {
+          "type": "tool",
+          "tool": { "type": "endCall" }
+        }
+      ]
+    }
+  ],
+
+  "analysisPlan": {
+    "summaryPlan": {
+      "enabled": true,
+      "timeoutSeconds": 10,
+      "messages": [
+        {
+          "role": "system",
+          "content": "{{SUMMARY_PROMPT}}"
+        },
+        {
+          "role": "user",
+          "content": "Transcript:\n\n{{transcript}}"
+        }
+      ]
+    },
+
+    "structuredDataPlan": {
+      "enabled": true,
+      "schema": {
+        "type": "object",
+        "properties": {
+          "reservationRequested": { "type": "boolean" },
+          "guestName": { "type": "string" },
+          "phoneNumber": { "type": "string" },
+          "partySize": { "type": "number" },
+          "date": { "type": "string" },
+          "time": { "type": "string" },
+          "notes": { "type": "string" },
+          "allergyMentioned": { "type": "string" },
+          "callbackRequested": { "type": "boolean" },
+          "unansweredQuestions": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["reservationRequested", "callbackRequested"]
+      }
+    }
+  }
+}
