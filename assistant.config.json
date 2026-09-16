@@ -1,5 +1,5 @@
 {
-  "name": "REPLACE_WITH_YOUR_NAME — Lemongrass Kitchen (inbound)",
+  "name": "Dmytro — Lemongrass Kitchen (inbound)",
 
   "firstMessage": "Lemongrass Kitchen, this is the front desk. How can I help?",
   "firstMessageMode": "assistant-speaks-first",
@@ -41,9 +41,9 @@
   },
 
   "voice": {
-    "provider": "11labs",
-    "voiceId": "REPLACE_AFTER_VOICE_SELECTION",
-    "model": "eleven_flash_v2_5",
+    "provider": "vapi",
+    "voiceId": "Elliot",
+    "cachingEnabled": true,
     "chunkPlan": {
       "enabled": true,
       "formatPlan": {
