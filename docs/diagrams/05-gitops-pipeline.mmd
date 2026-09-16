@@ -1,24 +1,29 @@
 flowchart TD
-    KB["kb/kb-fact-sheet.md"] --> B["build.mjs"]
+    KB["kb/kb-fact-sheet.md<br/>недоторканий оригінал"] --> B["build.mjs"]
+    RT["kb/routing.json<br/>правила поділу"] --> B
     P["prompt/system-prompt.md"] --> B
     C["assistant.config.json"] --> B
 
-    B --> TOK{"K > 580 токенів?"}
-    TOK -->|"так"| WARN["CI warning:<br/>див. README Scaling"]
+    B --> SPLIT{"поділ за routing.json"}
+    SPLIT -->|"HOT + алергенна матриця"| INL["у системний промпт"]
+    SPLIT -->|"COLD"| COLDF["kb-cold.md"]
+
+    INL --> TOK{"K_hot > порога?"}
+    TOK -->|"так"| WARN["CI падає:<br/>ревізувати поділ"]
     TOK -->|"ні"| R["build/assistant.rendered.json"]
-    WARN --> R
+    COLDF --> R
 
     R --> BR{"Гілка"}
+    BR -->|"PR"| PR1["lint + тести<br/>0 кредитів"]
+    PR1 -->|"fail"| BLOCK["Мердж заблоковано"]
+    PR1 -->|"pass"| REV["Ревʼю"]
 
-    BR -->|"PR"| PR1["schema lint"]
-    PR1 --> PR2["eval.mjs<br/>2 сценарії, Chat API"]
-    PR2 -->|"fail"| BLOCK["Мердж заблоковано"]
-    PR2 -->|"pass"| REV["Ревʼю"]
-
-    BR -->|"main"| M1["eval.mjs"]
-    M1 --> M2["deploy.mjs<br/>PATCH /assistant/:id"]
-    M2 --> M3["smoke check"]
-    M3 --> VAPI["Vapi sandbox"]
+    BR -->|"main"| M1["eval.mjs<br/>2 сценарії + холодний кейс"]
+    M1 --> D1["POST /file<br/>лише при зміні хешу"]
+    D1 --> D2["PATCH /tool<br/>query + fileIds"]
+    D2 --> D3["PATCH /assistant"]
+    D3 --> ST["коміт state/resources.json"]
+    ST --> VAPI["Vapi sandbox"]
 
     style BLOCK fill:#9d0208,color:#fff
     style VAPI fill:#2d6a4f,color:#fff

@@ -1,21 +1,28 @@
 flowchart LR
-    G["Гість<br/>web call або chat<br/>з дашборду"]
+    G["Гість<br/>web call або chat"]
 
     subgraph VAPI["Vapi runtime"]
         direction TB
         STT["Deepgram nova-3<br/>keyterm boosting"]
-        EP{"smartEndpointingPlan<br/>LiveKit"}
-        LLM["LLM<br/>системний промпт:<br/>persona + KB + guardrails"]
+        EP{"smartEndpointingPlan"}
+        LLM["LLM<br/>HOT уже в контексті:<br/>години, політики, алергени, guardrails"]
+        Q{"потрібна конкретна<br/>страва або ціна?"}
+        QT["query tool<br/>requestStartMessage"]
+        KB[("Vapi KB<br/>COLD: меню")]
         TTS["TTS low-latency<br/>formatPlan"]
-        EC["endCall tool"]
+        EC["endCall"]
 
         STT --> EP
-        EP -->|"репліку завершено"| LLM
-        LLM -->|"текст"| TTS
+        EP --> LLM
+        LLM --> Q
+        Q -->|"ні — ~85% реплік"| TTS
+        Q -->|"так"| QT
+        QT --> KB
+        KB --> LLM
         LLM -.->|"розмову завершено"| EC
     end
 
     G --> STT
     TTS --> G
     EC --> AN["analysisPlan<br/>summary + structuredData"]
-    AN --> LOG["Call log<br/>у дашборді Vapi"]
+    AN --> LOG["Call log у дашборді"]

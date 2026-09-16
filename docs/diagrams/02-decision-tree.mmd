@@ -1,15 +1,16 @@
 flowchart TD
-    S["Де тримати знання?"] --> W{"Дозволені вебхуки?"}
-    W -->|"ні — умова ТЗ"| K{"Розмір корпусу K"}
-    W -->|"так"| EXT["Зовнішній RAG<br/>поза межами завдання"]
+    S["Факт із бази знань"] --> Q1{"питається в<br/>більшості дзвінків?"}
+    Q1 -->|"так"| HOT
+    Q1 -->|"ні"| Q2{"промах пошуку дорожчий<br/>за незручність?"}
+    Q2 -->|"так — алергени"| HOT
+    Q2 -->|"ні"| Q3{"це поведінка асистента,<br/>а не довідка?"}
+    Q3 -->|"так"| HOT
+    Q3 -->|"ні"| Q4{"росте разом<br/>із бізнесом?"}
+    Q4 -->|"ні"| HOT
+    Q4 -->|"так"| COLD
 
-    K -->|"K < 580 тк<br/>зараз 520"| INL["Inline у системному промпті"]
-    K -->|"580 тк – 5k"| CMP["Inline + ущільнення формату"]
-    K -->|"5k – 50k"| HYB["Гібрид: hot inline / cold query tool"]
-    K -->|"> 50k"| RAG["Повний retrieval<br/>topic-scoped KB"]
+    HOT["HOT<br/>інлайн у системний промпт"]
+    COLD["COLD<br/>Vapi KB + query tool"]
 
-    INL --> DEC["ОБРАНО"]
-
-    style DEC fill:#2d6a4f,color:#fff
-    style INL fill:#40916c,color:#fff
-    style EXT fill:#6c757d,color:#fff
+    style HOT fill:#2d6a4f,color:#fff
+    style COLD fill:#6c757d,color:#fff
