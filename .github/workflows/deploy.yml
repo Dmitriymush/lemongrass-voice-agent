@@ -1,0 +1,68 @@
+name: Deploy
+
+# Paid tier of the credit policy (docs/ARCHITECTURE.md §8.4). Every run here calls the
+# model, so the triggers are narrow on purpose: main, or a deliberate manual run.
+# Adding `pull_request` would make every PR spend sandbox credits — tests/workflows.test.mjs
+# asserts that it is absent.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A second deploy landing mid-run would race the first over the same assistant.
+concurrency:
+  group: vapi-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # only to commit state/resources.json back, see the last step
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Test suite
+        run: npm test
+
+      - name: Build assistant
+        run: npm run build
+
+      # The guardrail gate. If either reviewer scenario regresses, nothing ships.
+      - name: Run reviewer scenarios
+        run: npm run eval
+        env:
+          VAPI_API_KEY: ${{ secrets.VAPI_API_KEY }}
+          VAPI_ASSISTANT_ID: ${{ secrets.VAPI_ASSISTANT_ID }}
+
+      - name: Deploy to Vapi
+        run: npm run deploy
+        env:
+          VAPI_API_KEY: ${{ secrets.VAPI_API_KEY }}
+          VAPI_ASSISTANT_ID: ${{ secrets.VAPI_ASSISTANT_ID }}
+
+      # Vapi files are immutable, so a changed fact sheet produces a new file id.
+      # If that id is not committed back, the next deploy sees a stale hash, uploads
+      # again, and the org slowly fills with orphaned copies.
+      - name: Record new Vapi resource ids
+        run: |
+          if git diff --quiet -- state/resources.json; then
+            echo "state/resources.json unchanged"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state/resources.json
+          git commit -m "Record Vapi resource ids after deploy [skip ci]"
+          git push

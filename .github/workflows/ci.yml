@@ -1,0 +1,37 @@
+name: CI
+
+# Free tier of the credit policy (docs/ARCHITECTURE.md §8.4): every push and every
+# pull request runs the checks that make no model calls at all. These catch the
+# majority of breakages — malformed config, a missing {{KNOWLEDGE_BASE}} marker, a
+# fact sheet that outgrew the inline threshold — and cost nothing.
+#
+# The scenario evaluation is deliberately not here. It calls the model on every turn
+# and spends sandbox credits, so it runs on main or on demand. See deploy.yml.
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Test suite
+        run: npm test
+
+      # Enforces the assistant contract and the grounding rule: the build fails if the
+      # knowledge base has crossed the threshold where inline grounding stops being
+      # the cheaper option.
+      - name: Build assistant
+        run: npm run build
