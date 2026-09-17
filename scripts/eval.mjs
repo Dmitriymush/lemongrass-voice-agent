@@ -50,14 +50,18 @@ let failed = 0;
 
 for (const scenario of SCENARIOS) {
   const started = Date.now();
-  const { failures, transcript } = await runScenario(scenario, chatSession());
+  const { failures, transcript, timings } = await runScenario(scenario, chatSession());
   const seconds = ((Date.now() - started) / 1000).toFixed(1);
 
+  const sorted = [...timings].sort((a, b) => a - b);
+  const p50 = sorted[Math.floor(sorted.length / 2)];
+  const slowest = sorted.at(-1);
+
   if (failures.length === 0) {
-    console.log(`PASS  ${scenario.id}  (${scenario.turns.length} turns, ${seconds}s)`);
+    console.log(`PASS  ${scenario.id}  (${scenario.turns.length} turns, ${seconds}s, p50 ${p50}ms, slowest ${slowest}ms)`);
   } else {
     failed += failures.length;
-    console.log(`FAIL  ${scenario.id}  (${failures.length} violation(s), ${seconds}s)`);
+    console.log(`FAIL  ${scenario.id}  (${failures.length} violation(s), ${seconds}s, p50 ${p50}ms, slowest ${slowest}ms)`);
 
     for (const f of failures) {
       console.log(`\n  turn ${f.turn} — ${f.check}`);

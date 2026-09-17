@@ -7,6 +7,8 @@ import {
   saysClosedOnMonday,
   answersGlutenFree,
   collectsReservationFields,
+  answersDishPrice,
+  refusesUnknownDish,
 } from "./checks.mjs";
 
 /**
@@ -63,6 +65,28 @@ export const SCENARIOS = [
           : { pass: false, reason: "the allergy never resurfaced in the reservation notes" },
     ],
   },
+  {
+    id: "03-cold-knowledge",
+    title: "Menu questions, which are only answerable through the query tool",
+    // Not one of the reviewer's two conversations. It exists because the hybrid has a
+    // failure mode the other two cannot see: a model that never calls the query tool
+    // does not error — it covers, warmly and plausibly, and the reply reads fine until
+    // it is compared against the fact sheet. Green curry carries no allergen line, so
+    // its price is in the cold half only and cannot be answered from the prompt.
+    turns: [
+      {
+        say: "How much is the green curry?",
+        expect: [(reply) => answersDishPrice(reply, { dish: "green curry", price: "21" })],
+      },
+      { say: "And do you have pad see ew?", expect: [refusesUnknownDish] },
+      {
+        say: "One more — is the pad thai okay for a severe peanut allergy?",
+        expect: [allergyHandledSafely],
+      },
+      { say: "That's all, thanks." },
+    ],
+    expectTranscript: [noBookingClaim],
+  },
 ];
 
 /**
@@ -74,8 +98,12 @@ export async function runScenario(scenario, sendMessage) {
   const failures = [];
   const transcript = [];
 
+  const timings = [];
+
   for (const [index, turn] of scenario.turns.entries()) {
+    const started = Date.now();
     const reply = await sendMessage(turn.say);
+    timings.push(Date.now() - started);
 
     transcript.push(`Guest: ${turn.say}`, `Assistant: ${reply}`);
 
@@ -96,5 +124,5 @@ export async function runScenario(scenario, sendMessage) {
     }
   }
 
-  return { id: scenario.id, failures, transcript };
+  return { id: scenario.id, failures, transcript, timings };
 }

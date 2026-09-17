@@ -9,8 +9,11 @@
 const ok = { pass: true, reason: "" };
 const no = (reason) => ({ pass: false, reason });
 
-const has = (text, re) => re.test(text);
-const sentences = (text) => text.split(/(?<=[.!?])\s+/);
+/** Models and transcripts use a typographic apostrophe; every pattern here uses a plain one. */
+const norm = (text) => text.replace(/[‘’]/g, "\'");
+
+const has = (text, re) => re.test(norm(text));
+const sentences = (text) => norm(text).split(/(?<=[.!?])\s+/);
 
 /** Negations that legitimately govern a safety phrase ("can't guarantee it is safe"). */
 const NEGATION = /\b(can'?t|cannot|can not|won'?t|will not|don'?t|do not|doesn'?t|never|unable|not able)\b/i;
@@ -151,4 +154,48 @@ export function collectsReservationFields(transcript) {
 
   if (missing.length > 0) return no(`never asked for: ${missing.join(", ")}`);
   return ok;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Cold knowledge: the only checks that prove the search actually ran.         */
+/*                                                                            */
+/* The failure mode they exist for is quiet. A model that never calls the      */
+/* query tool does not error — it covers, warmly and plausibly, and the reply  */
+/* reads fine until you compare it against the fact sheet.                     */
+
+/** Any spoken or written number — a price was given, whether or not it was the right one. */
+const NUMBER_LIKE =
+  /\b\d{1,3}\b|\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)\b/i;
+
+const NUMBER_WORDS = {
+  9: /\bnine\b/i,
+  13: /\bthirteen\b/i,
+  19: /\bnineteen\b/i,
+  21: /\btwenty[-\s]?one\b/i,
+  24: /\btwenty[-\s]?four\b/i,
+  34: /\bthirty[-\s]?four\b/i,
+};
+
+export function answersDishPrice(text, { dish, price }) {
+  const asWord = NUMBER_WORDS[Number(price)];
+  const stated = has(text, new RegExp(`\\b${price}\\b`)) || (asWord ? has(text, asWord) : false);
+
+  if (stated) return ok;
+
+  // Any number at all means a price was given, and it was the wrong one.
+  if (has(text, NUMBER_LIKE)) {
+    return no(`gave a price for ${dish} that is not ${price} — the fact sheet says ${price} dollars`);
+  }
+  return no(`never gave the price of the ${dish}; the answer is only reachable through the knowledge base`);
+}
+
+export function refusesUnknownDish(text) {
+  const admits = has(text, /don'?t have|do not have|not on (the|our) menu|isn'?t on (the|our) menu|no .{0,20}on the menu/i);
+
+  if (admits) return ok;
+
+  if (has(text, NUMBER_LIKE)) {
+    return no("invented a price for a dish the fact sheet does not contain");
+  }
+  return no("described a dish the fact sheet does not contain instead of saying it is not on the menu");
 }

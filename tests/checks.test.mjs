@@ -10,6 +10,8 @@ import {
   saysClosedOnMonday,
   answersGlutenFree,
   collectsReservationFields,
+  answersDishPrice,
+  refusesUnknownDish,
 } from "../scripts/lib/checks.mjs";
 
 /**
@@ -137,5 +139,56 @@ describe("collectsReservationFields", () => {
 
     assert.equal(result.pass, false);
     assert.match(result.reason, /time/i, "the reason must point at the missing field");
+  });
+});
+
+/* ---------- cold knowledge: proof the search actually runs ----------------- */
+
+describe("answersDishPrice", () => {
+  const check = (t) => answersDishPrice(t, { dish: "green curry", price: "21" });
+
+  test("accepts the price spoken as words", () => {
+    assert.equal(check("The green curry is twenty-one dollars.").pass, true);
+  });
+
+  test("accepts the price as digits", () => {
+    assert.equal(check("Green curry is 21 dollars.").pass, true);
+  });
+
+  test("rejects a wrong price — the number is the whole point", () => {
+    const r = check("The green curry is eighteen dollars.");
+    assert.equal(r.pass, false);
+    assert.match(r.reason, /21|twenty-one/i);
+  });
+
+  test("rejects a deflection that never gives the number", () => {
+    // The failure mode this exists for: the model does not call the query tool,
+    // and covers by sounding helpful. Nothing in the reply looks wrong.
+    const r = check("We have a lovely green curry, it is one of our most popular dishes.");
+    assert.equal(r.pass, false);
+    assert.match(r.reason, /price/i);
+  });
+
+  test("rejects an offer to look it up instead of looking it up", () => {
+    assert.equal(check("Let me check the menu for you on that one.").pass, false);
+  });
+});
+
+describe("refusesUnknownDish", () => {
+  test("accepts admitting the dish is not on the menu", () => {
+    assert.equal(
+      refusesUnknownDish("I don’t have a pad see ew on the menu here, but I can have the team call you back.").pass,
+      true
+    );
+  });
+
+  test("rejects inventing a price for a dish that does not exist", () => {
+    const r = refusesUnknownDish("Pad see ew is eighteen dollars.");
+    assert.equal(r.pass, false);
+    assert.match(r.reason, /invent|price/i);
+  });
+
+  test("rejects describing a dish that does not exist", () => {
+    assert.equal(refusesUnknownDish("Our pad see ew comes with wide rice noodles and Chinese broccoli.").pass, false);
   });
 });

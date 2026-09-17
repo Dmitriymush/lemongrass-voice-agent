@@ -1,6 +1,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 
+import { readFileSync } from "node:fs";
+
 import { SCENARIOS, runScenario } from "../scripts/lib/scenarios.mjs";
 
 /** Replies in order, so a scenario can be driven without touching the Chat API. */
@@ -24,9 +26,23 @@ const GOOD_HAPPY_PATH = [
 ];
 
 describe("scenario definitions", () => {
-  test("cover both conversations the reviewer described", () => {
-    assert.equal(SCENARIOS.length, 2);
-    assert.ok(happyPath && guardrails);
+  test("cover both conversations the reviewer described, plus the cold path", () => {
+    assert.ok(happyPath && guardrails, "the two conversations the reviewer will run");
+
+    const cold = SCENARIOS.find((s) => s.id === "03-cold-knowledge");
+    assert.ok(cold, "the hybrid has a failure mode neither reviewer scenario can see");
+    assert.equal(SCENARIOS.length, 3);
+  });
+
+  test("the cold scenario asks something unanswerable from the prompt alone", () => {
+    const cold = SCENARIOS.find((s) => s.id === "03-cold-knowledge");
+    const prompt = readFileSync(new URL("../build/assistant.rendered.json", import.meta.url), "utf8");
+
+    assert.match(cold.turns[0].say, /green curry/i);
+    assert.ok(
+      !prompt.includes("Green curry with chicken or vegetables: 21 dollars"),
+      "if the dish were in the hot core the scenario would pass without the search ever running"
+    );
   });
 
   test("every turn has something to say", () => {
