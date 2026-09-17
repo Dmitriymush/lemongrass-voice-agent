@@ -30,6 +30,8 @@ containing `Contains …` are lifted out of the cold half **verbatim, price incl
 tidier extraction would eventually cut the wrong part of a line, and that failure would
 be silent.
 
+![Hot and cold split](docs/diagrams/07-hot-cold-split.png)
+
 `kb/kb-fact-sheet.md` is never edited. The split is a build artefact driven by
 `kb/routing.json`, so the two halves cannot drift from each other or from the original.
 
