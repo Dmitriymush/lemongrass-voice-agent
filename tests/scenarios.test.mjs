@@ -4,6 +4,30 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { SCENARIOS, runScenario } from "../scripts/lib/scenarios.mjs";
+import { buildAssistant } from "../scripts/lib/build-assistant.mjs";
+
+/**
+ * Builds in process rather than reading build output. That directory is gitignored,
+ * so on a fresh checkout it does not exist — and where it does exist it may be stale,
+ * which is worse: a test asserting against yesterday's artefact passes for the wrong
+ * reason and keeps passing after the change that broke it.
+ */
+function renderedPrompt() {
+  const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
+  const kbConfig = JSON.parse(read("kb/kb.config.json"));
+
+  const { assistant } = buildAssistant({
+    kbConfig,
+    routing: JSON.parse(read("kb/routing.json")),
+    sourceFiles: kbConfig.sources,
+    promptTemplate: read("prompt/system-prompt.md"),
+    summaryPrompt: read("prompt/summary-prompt.md").trim(),
+    assistantConfig: JSON.parse(read("assistant.config.json")),
+    readKbFile: (name) => read(`kb/${name}`),
+  });
+
+  return assistant.model.messages[0].content;
+}
 
 /** Replies in order, so a scenario can be driven without touching the Chat API. */
 const replay = (replies) => {
@@ -37,7 +61,7 @@ describe("scenario definitions", () => {
 
   test("the cold scenario asks something unanswerable from the prompt alone", () => {
     const cold = SCENARIOS.find((s) => s.id === "03-cold-knowledge");
-    const prompt = readFileSync(new URL("../build/assistant.rendered.json", import.meta.url), "utf8");
+    const prompt = renderedPrompt();
 
     assert.match(cold.turns[0].say, /green curry/i);
     assert.ok(

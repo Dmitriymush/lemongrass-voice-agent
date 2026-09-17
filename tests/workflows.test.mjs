@@ -77,6 +77,19 @@ describe("deploy workflow", () => {
     }
   });
 
+  test("5.6b deploying is gated on the same condition as the scenarios", () => {
+    const steps = stepsOf(deploy);
+    const evalStep = steps.find((s) => (s.run ?? "").includes("npm run eval"));
+    const deployStep = steps.find((s) => (s.run ?? "").includes("npm run deploy"));
+
+    assert.ok(evalStep.if, "the gate is skipped where it cannot run");
+    assert.equal(
+      deployStep.if,
+      evalStep.if,
+      "deploy must carry the same condition as the gate — otherwise skipping the gate ships unverified"
+    );
+  });
+
   test("5.7 passes both secrets to the steps that need them", () => {
     const withSecrets = stepsOf(deploy).filter((s) => JSON.stringify(s.env ?? {}).includes("secrets."));
 

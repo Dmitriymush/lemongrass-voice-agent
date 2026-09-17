@@ -38,23 +38,40 @@ jobs:
       - name: Build assistant
         run: npm run build
 
-      # The guardrail gate. If either reviewer scenario regresses, nothing ships.
+      # The guardrail gate, and the condition on everything after it. Running the
+      # scenarios needs a card on the Vapi org — POST /chat returns 402 without one —
+      # so where that is not available the gate cannot run, and nothing may ship.
+      # Set the repository variable RUN_EVAL to "true" once billing exists.
+      #
+      # Deploying is conditioned on the same variable rather than on the gate's
+      # outcome, so the invariant holds either way: no deploy without a passing gate.
       - name: Run reviewer scenarios
+        if: vars.RUN_EVAL == 'true'
         run: npm run eval
         env:
           VAPI_API_KEY: ${{ secrets.VAPI_API_KEY }}
           VAPI_ASSISTANT_ID: ${{ secrets.VAPI_ASSISTANT_ID }}
 
       - name: Deploy to Vapi
+        if: vars.RUN_EVAL == 'true'
         run: npm run deploy
         env:
           VAPI_API_KEY: ${{ secrets.VAPI_API_KEY }}
           VAPI_ASSISTANT_ID: ${{ secrets.VAPI_ASSISTANT_ID }}
 
+      - name: Explain why nothing was deployed
+        if: vars.RUN_EVAL != 'true'
+        run: |
+          echo "Tests and build passed. Nothing was deployed."
+          echo "The scenario gate needs a card on the Vapi org (POST /chat returns 402"
+          echo "without one), and this pipeline does not ship without running it."
+          echo "Set the repository variable RUN_EVAL=true to enable both steps."
+
       # Vapi files are immutable, so a changed fact sheet produces a new file id.
       # If that id is not committed back, the next deploy sees a stale hash, uploads
       # again, and the org slowly fills with orphaned copies.
       - name: Record new Vapi resource ids
+        if: vars.RUN_EVAL == 'true'
         run: |
           if git diff --quiet -- state/resources.json; then
             echo "state/resources.json unchanged"

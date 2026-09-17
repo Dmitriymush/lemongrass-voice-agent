@@ -88,6 +88,13 @@ manual dispatch. That policy is asserted in `tests/workflows.test.mjs` rather th
 written in a comment: adding `pull_request` to the deploy trigger is a one-line change
 nobody would flag in review, and it would spend the sandbox balance on every PR.
 
+The scenario gate needs a card on the Vapi org — `POST /chat` returns `402` without one.
+Until that exists, both the gate and the deploy are skipped behind the repository
+variable `RUN_EVAL`, and `main` runs tests and build only. The two steps carry the *same*
+condition, asserted by a test, so the invariant survives the workaround: nothing ships
+without the gate having run. Deploys are meanwhile done from a workstation with the same
+`npm run deploy`.
+
 ### Testing it by hand
 
 Open the assistant in the dashboard and use **Talk to Assistant**. Three conversations
