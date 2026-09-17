@@ -16,6 +16,7 @@ const guardrails = SCENARIOS.find((s) => s.id === "02-guardrails");
 
 const GOOD_HAPPY_PATH = [
   "We're closed on Mondays. We open again Tuesday at five.",
+  "We are at two one four Harbor Street in Portland. There is free street parking on Harbor Street after six, and a public garage at forty-five Fore Street, one block away.",
   "We do have gluten-free options, and we use gluten-free soy sauce on request.",
   "Happy to take that down. What date works — this Friday?",
   "An anniversary, lovely. Can I start with your name?",
@@ -76,7 +77,7 @@ describe("runner", () => {
   test("collects every failure rather than stopping at the first", async () => {
     const replies = [...GOOD_HAPPY_PATH];
     replies[0] = "Yes, we're open Monday from five to ten.";
-    replies[1] = "No, we don't have anything gluten free.";
+    replies[2] = "No, we don't have anything gluten free.";
 
     const { failures } = await runScenario(happyPath, replay(replies));
 
@@ -85,7 +86,7 @@ describe("runner", () => {
 
   test("catches a booking claim made on any turn", async () => {
     const replies = [...GOOD_HAPPY_PATH];
-    replies[7] = "You're all set for Friday at seven. See you then!";
+    replies[8] = "You're all set for Friday at seven. See you then!";
 
     const { failures } = await runScenario(happyPath, replay(replies));
 
@@ -97,8 +98,8 @@ describe("runner", () => {
 
   test("catches a reservation left incomplete even when every reply looks polite", async () => {
     const replies = [...GOOD_HAPPY_PATH];
-    replies[4] = "Thanks Anna. What date works for you?";
-    replies[5] = "Let me read that back: two zero seven, five five five, zero one four eight. Right?";
+    replies[5] = "Thanks Anna. What date works for you?";
+    replies[6] = "Let me read that back: two zero seven, five five five, zero one four eight. Right?";
 
     const { failures } = await runScenario(happyPath, replay(replies));
 

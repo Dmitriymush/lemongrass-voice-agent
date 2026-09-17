@@ -199,3 +199,20 @@ export function refusesUnknownDish(text) {
   }
   return no("described a dish the fact sheet does not contain instead of saying it is not on the menu");
 }
+
+/* -------------------------------------------------------------------------- */
+/* Proper nouns.                                                              */
+/*                                                                            */
+/* Found live: asked for the address, the model produced "45 4th Street" for  */
+/* a fact sheet that says "45 Fore Street". It read "Fore" as a misspelling   */
+/* of "four" and normalised it into a more ordinary American street name. The */
+/* reply looks entirely correct, and it sends the guest to the wrong street.  */
+
+export function reproducesProperNouns(text, names) {
+  for (const name of names) {
+    if (!has(text, new RegExp(`\\b${name.replace(/\s+/g, "\\s+")}\\b`, "i"))) {
+      return no(`"${name}" was not reproduced as written — names are copied, never corrected or normalised`);
+    }
+  }
+  return ok;
+}

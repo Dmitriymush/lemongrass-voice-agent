@@ -9,6 +9,7 @@ import {
   collectsReservationFields,
   answersDishPrice,
   refusesUnknownDish,
+  reproducesProperNouns,
 } from "./checks.mjs";
 
 /**
@@ -25,6 +26,12 @@ export const SCENARIOS = [
     title: "Guest asks about Monday and gluten-free, then books a table for four",
     turns: [
       { say: "Hi, are you open on Monday?", expect: [saysClosedOnMonday] },
+      {
+        // A street name that reads like a misspelling of "four" is exactly what a
+        // model quietly rewrites; the address is useless if it does.
+        say: "Where are you, and is there parking nearby?",
+        expect: [(r) => reproducesProperNouns(r, ["Harbor Street", "Fore Street"])],
+      },
       { say: "Got it. Do you have any gluten-free options?", expect: [answersGlutenFree] },
       { say: "Great. I'd like a table for four this Friday at 7 pm." },
       { say: "It's for an anniversary." },
