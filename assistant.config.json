@@ -44,7 +44,9 @@
       "Lemongrass:3",
       "massaman:5",
       "tamarind:5",
-      "papaya:3"
+      "papaya:3",
+      "eight:3",
+      "nine:3"
     ],
     "keyterm": [
       "pad thai",
@@ -66,7 +68,11 @@
       "dress code",
       "corkage fee",
       "cancellation policy",
-      "Apple Pay"
+      "Apple Pay",
+      "table for eight",
+      "table for two",
+      "party of eight",
+      "lunch special"
     ]
   },
   "voice": {
