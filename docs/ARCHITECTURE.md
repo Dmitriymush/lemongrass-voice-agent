@@ -31,7 +31,7 @@ Trap 6 lives in a template variable. Trap 7 is not in the prompt at all — it i
 
 ## 2. Runtime
 
-![Runtime architecture](diagrams/01-runtime.svg)
+![Runtime architecture](diagrams/01-runtime.png)
 
 Two answer paths, deliberately:
 
@@ -68,11 +68,11 @@ COLD  if   it grows with the business
       AND  a miss is merely inconvenient
 ```
 
-![Hot/cold decision tree](diagrams/02-decision-tree.svg)
+![Hot/cold decision tree](diagrams/02-decision-tree.png)
 
 Applied to the fact sheet:
 
-![Hot and cold split](diagrams/07-hot-cold-split.svg)
+![Hot and cold split](diagrams/07-hot-cold-split.png)
 
 | Section | Route | Why |
 |---|---|---|
@@ -167,7 +167,7 @@ rather than a reversal.
 
 ## 5. The prompt
 
-![Prompt structure](diagrams/03-prompt-structure.svg)
+![Prompt structure](diagrams/03-prompt-structure.png)
 
 Section order is chosen for caching: stable content first, the volatile date last.
 
@@ -198,13 +198,13 @@ and each high-risk rule carries wrong examples beside the right one, lifted verb
 from the failing samples in `tests/checks.test.mjs`. The prompt and the tests therefore
 describe the same boundary rather than two similar ones.
 
-![Guardrails in the reviewer's second call](diagrams/04-guardrails-call2.svg)
+![Guardrails in the reviewer's second call](diagrams/04-guardrails-call2.png)
 
 ---
 
 ## 6. Delivery
 
-![GitOps pipeline](diagrams/05-gitops-pipeline.svg)
+![GitOps pipeline](diagrams/05-gitops-pipeline.png)
 
 ```
 kb/kb-fact-sheet.md     the reviewer's original, byte for byte, never edited

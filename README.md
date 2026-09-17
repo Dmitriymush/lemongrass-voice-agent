@@ -66,12 +66,14 @@ npm run deploy    # uploads the knowledge base, patches the assistant, verifies 
 `npm run deploy` needs two values, read from a gitignored `.env` locally and from
 repository secrets in CI:
 
-```
-VAPI_API_KEY=<private key, Vapi dashboard → Settings → API Keys>
-VAPI_ASSISTANT_ID=<the assistant it patches, created once>
+```bash
+cp .env.example .env     # then fill in the two values
+npm run env:check        # confirms both are set, without printing them
 ```
 
-`npm run env:check` confirms both are present without printing them.
+It must be the **private** key. Both Vapi keys are 36-character UUIDs, so nothing about
+the shape distinguishes them — the only signal is a 401 saying you may have swapped
+them. `.env.example` explains both values and why.
 
 **Deployment is idempotent.** The assistant is patched by pinned id and never created —
 the org is shared, and a stray `POST` would leave a duplicate for someone else to clean
