@@ -89,6 +89,18 @@
           "time",
           "date",
           "number"
+        ],
+        "replacements": [
+          {
+            "type": "regex",
+            "regex": "\\b4th Street\\b",
+            "value": "Fore Street"
+          },
+          {
+            "type": "regex",
+            "regex": "\\bFourth Street\\b",
+            "value": "Fore Street"
+          }
         ]
       }
     }

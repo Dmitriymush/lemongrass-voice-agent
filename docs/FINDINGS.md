@@ -217,3 +217,60 @@ One was verified by the platform itself. The first CI run on `main` stopped at t
 scenario gate because no secrets were configured — the build passed, the evaluation
 failed, and **nothing deployed**. The gate is in the repository's history, not only in
 its description.
+
+---
+
+## E. A defect the prompt could not fix
+
+### E1 — The model rewrites a street name, and no instruction stops it
+
+The fact sheet says *45 Fore Street*. Asked for the address, the model produces
+**"45 4th Street"** — confirmed in the raw model output, not merely in a transcript.
+"Fore" is read as a misspelling of "four" and normalised into a far more common
+American address pattern.
+
+Three rounds of prompt engineering failed to stop it. The deployed prompt contained,
+simultaneously:
+
+- the fact itself, inlined verbatim
+- a categorical rule: *"Street names, dish names and guests' names are copied, never
+  corrected, normalised or modernised"*
+- that exact case named: *"If the text says Fore Street, it is Fore Street: a street
+  name, not the number four and not Fourth Street"*
+- a right example and a wrong example, the wrong one being the literal output observed
+
+The model produced "45 4th Street" anyway.
+
+**What this says.** Inlining a fact verbatim guarantees the model *reads* the right
+thing. It guarantees nothing about what the model then *says*. Where a token sequence
+is overwhelmingly more probable than the correct one, an instruction is a suggestion
+competing against a prior, and it loses.
+
+**The fix is a layer down.** `voice.chunkPlan.formatPlan.replacements` substitutes in
+the speech pipeline, after the model and before TTS:
+
+```json
+{ "type": "regex", "regex": "\\b4th Street\\b", "value": "Fore Street" }
+```
+
+A substitution cannot lose an argument with a prior.
+
+### E2 — The same lesson, found twice more
+
+Once the pattern was visible it explained two other stubborn defects:
+
+**Currency.** The model kept emitting `$19` across every wording of a rule telling it to
+say "nineteen dollars". `formatPlan`'s `dollarAmount` formatter already converts this
+deterministically, so the rule was removed from the prompt rather than sharpened again.
+
+**An invented requirement.** Collecting a phone number took five rounds because the model
+demanded an area code that nothing in the prompt asks for — a US-format prior asserting
+itself over a guest whose number is shaped differently. That one *is* promptable, because
+it is behaviour rather than surface form, and the rule now says to take the number in
+whatever shape it arrives and to stop asking after two attempts.
+
+**The dividing line.** Prompts are the right layer for *behaviour* — what to do, in what
+order, what never to say. They are the wrong layer for *surface form*, where a
+deterministic transform exists and a strong prior is pulling the other way. Two of the
+three defects above belonged to the speech layer; only the third was ever really a
+prompting problem.
