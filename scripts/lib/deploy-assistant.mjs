@@ -48,13 +48,19 @@ export async function deploy({ assistant, cold, env, state = {}, fetch: fetchImp
 
   const headers = { Authorization: `Bearer ${apiKey}` };
   const actions = [];
-  const next = { ...state };
+
+  // Recorded resources belong to one assistant, and therefore to one Vapi org. Point
+  // the deploy at a different assistant and the stored file id refers to a file that
+  // org cannot see; a matching content hash would then skip the upload and wire the
+  // assistant to nothing. Treat the state as empty instead.
+  const reusable = state.assistantId === assistantId;
+  const next = reusable ? { ...state } : { assistantId };
 
   /* -- the knowledge base ---------------------------------------------------- */
 
   const hash = createHash("sha256").update(cold).digest("hex");
 
-  if (hash !== state.coldHash || !state.coldFileId) {
+  if (!reusable || hash !== state.coldHash || !state.coldFileId) {
     const form = new FormData();
     form.append("file", new File([cold], COLD_FILENAME, { type: COLD_MIMETYPE }));
 
@@ -89,6 +95,7 @@ export async function deploy({ assistant, cold, env, state = {}, fetch: fetchImp
   if (!res.ok) throw new Error(`PATCH /assistant/${assistantId} failed: ${res.status} ${await res.text()}`);
 
   actions.push("patch-assistant");
+  next.assistantId = assistantId;
 
   // Read back and hold the server state to the same contract as the artefact. The
   // repository is only the source of truth if what Vapi actually stored matches it;

@@ -290,3 +290,24 @@ describe("drift between the repository and the deployed assistant", () => {
     assert.ok(fetch.calls.some((c) => c.method === "GET" && c.url.includes("/assistant/")));
   });
 });
+
+/* ---------- 7.11  state is scoped to one assistant ------------------------ */
+
+describe("state scoping", () => {
+  test("7.11 does not reuse a file id recorded against a different assistant", async () => {
+    const first = await run({ fetch: mockFetch() });
+    assert.equal(first.state.assistantId, ASSISTANT_ID, "state must record what it belongs to");
+
+    // Same content, different assistant — typically a different Vapi org, where that
+    // file id does not exist. Reusing it wires the assistant to nothing.
+    const fetch = mockFetch({ routes: { "POST /file": { ok: true, status: 201, json: async () => ({ id: "file_other_org" }) } } });
+    const second = await run({
+      state: first.state,
+      env: { VAPI_API_KEY: "key_123", VAPI_ASSISTANT_ID: "asst_in_another_org" },
+      fetch,
+    });
+
+    assert.ok(second.actions.includes("upload-knowledge-base"), "content hash alone must not authorise reuse across orgs");
+    assert.equal(second.state.coldFileId, "file_other_org");
+  });
+});
