@@ -1,26 +1,26 @@
 flowchart TB
-    SRC["kb-fact-sheet.md<br/>єдине джерело, недоторкане"]
+    SRC["kb-fact-sheet.md<br/>single source, never edited"]
     SRC --> R{"routing.json"}
 
-    subgraph HOT["HOT — інлайн, завжди в контексті"]
+    subgraph HOT["HOT — inlined, always in context"]
         direction TB
         H1["Contact and location"]
         H2["Opening hours"]
         H3["Dietary information"]
         H4["Reservations and groups"]
-        H5["Other: дрес-код, діти, оплата, доступність"]
-        H6["Алергенна матриця<br/>рядки Contains, витягнуті з меню"]
+        H5["Other: dress code, kids,<br/>payment, accessibility"]
+        H6["Allergen matrix<br/>'Contains' lines lifted from the menu"]
     end
 
-    subgraph COLD["COLD — Vapi KB, через query tool"]
+    subgraph COLD["COLD — knowledge base, via query tool"]
         direction TB
         C1["Menu highlights and prices"]
-        C2["надалі: повне меню, винна карта,<br/>сезонні пропозиції"]
+        C2["later: full menu, wine list,<br/>seasonal offers"]
     end
 
     R --> HOT
     R --> COLD
-    COLD -.->|"рядки Contains витягуються в HOT"| H6
+    COLD -.->|"'Contains' lines lifted into hot"| H6
 
     style HOT fill:#2d6a4f,color:#fff
     style COLD fill:#6c757d,color:#fff

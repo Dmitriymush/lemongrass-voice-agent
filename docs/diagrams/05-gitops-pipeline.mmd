@@ -1,28 +1,29 @@
 flowchart TD
-    KB["kb/kb-fact-sheet.md<br/>недоторканий оригінал"] --> B["build.mjs"]
-    RT["kb/routing.json<br/>правила поділу"] --> B
+    KB["kb/kb-fact-sheet.md<br/>untouched original"] --> B["build.mjs"]
+    RT["kb/routing.json<br/>split rules"] --> B
     P["prompt/system-prompt.md"] --> B
     C["assistant.config.json"] --> B
 
-    B --> SPLIT{"поділ за routing.json"}
-    SPLIT -->|"HOT + алергенна матриця"| INL["у системний промпт"]
-    SPLIT -->|"COLD"| COLDF["kb-cold.md"]
+    B --> SPLIT{"split by routing.json"}
+    SPLIT -->|"hot + allergen matrix"| INL["into the system prompt"]
+    SPLIT -->|"cold"| COLDF["kb/generated/kb-cold.txt"]
 
-    INL --> TOK{"K_hot > порога?"}
-    TOK -->|"так"| WARN["CI падає:<br/>ревізувати поділ"]
-    TOK -->|"ні"| R["build/assistant.rendered.json"]
+    INL --> TOK{"hot core over cap?"}
+    TOK -->|"yes"| WARN["build fails:<br/>revisit the split"]
+    TOK -->|"no"| R["build/assistant.rendered.json"]
     COLDF --> R
 
-    R --> BR{"Гілка"}
-    BR -->|"PR"| PR1["lint + тести<br/>0 кредитів"]
-    PR1 -->|"fail"| BLOCK["Мердж заблоковано"]
-    PR1 -->|"pass"| REV["Ревʼю"]
+    R --> BR{"Branch"}
+    BR -->|"pull request"| PR1["suite + build<br/>zero credits"]
+    PR1 -->|"fail"| BLOCK["merge blocked"]
+    PR1 -->|"pass"| REV["review"]
 
-    BR -->|"main"| M1["eval.mjs<br/>2 сценарії + холодний кейс"]
-    M1 --> D1["POST /file<br/>лише при зміні хешу"]
-    D1 --> D2["PATCH /tool<br/>query + fileIds"]
-    D2 --> D3["PATCH /assistant"]
-    D3 --> ST["коміт state/resources.json"]
+    BR -->|"main"| M1["eval.mjs<br/>reviewer scenarios + cold case"]
+    M1 --> D1["POST /file<br/>only if the hash changed"]
+    D1 --> D2["poll until processed"]
+    D2 --> D3["PATCH /assistant<br/>with the file id injected"]
+    D3 --> D4["read back, re-check contract"]
+    D4 --> ST["commit state/resources.json"]
     ST --> VAPI["Vapi sandbox"]
 
     style BLOCK fill:#9d0208,color:#fff

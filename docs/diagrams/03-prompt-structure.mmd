@@ -1,23 +1,24 @@
 flowchart TD
-    subgraph STABLE["Стабільний префікс — кешується всі turn-и дзвінка"]
+    subgraph STABLE["Stable prefix — cached for every turn of the call"]
         direction TB
         S1["1. Identity and style"]
-        S2["2. hot_knowledge<br/>контакти, години, парковка, політики"]
-        S3["3. allergen_matrix<br/>дослівні рядки Contains"]
-        S4["4. scope<br/>покриті теми HOT + COLD, anti-examples"]
+        S2["2. hot_knowledge<br/>contacts, hours, parking, policies"]
+        S3["3. allergen_matrix<br/>verbatim 'Contains' lines"]
+        S4["4. scope<br/>covered topics + anti-examples"]
         S5["5. Grounding rules"]
-        S6["6. Коли кликати query tool"]
-        S7["7. Allergen policy"]
-        S8["8. Reservation flow"]
-        S9["9. Banned phrases"]
-        S10["10. Role lock"]
-        S11["11. Call closure"]
-        S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9 --> S10 --> S11
+        S6["6. When to call the query tool"]
+        S7["7. Escalation to a person"]
+        S8["8. Allergen policy"]
+        S9["9. Reservation flow"]
+        S10["10. Banned phrases"]
+        S11["11. Role lock"]
+        S12["12. Call closure"]
+        S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9 --> S10 --> S11 --> S12
     end
 
-    S11 --> V["12. Поточна дата<br/>LiquidJS, America/New_York"]
-    V --> H["Історія діалогу"]
-    H --> R["Результати пошуку COLD<br/>вставляються сюди — далі кеш не діє"]
+    S12 --> V["13. Today's date<br/>LiquidJS, America/New_York"]
+    V --> H["Conversation history"]
+    H --> R["Retrieved cold chunks land here<br/>— cache stops applying past this point"]
 
     style STABLE fill:#1b4332,color:#fff
     style R fill:#9c6644,color:#fff

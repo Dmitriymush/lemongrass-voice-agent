@@ -1,16 +1,16 @@
 flowchart TD
-    S["Факт із бази знань"] --> Q1{"питається в<br/>більшості дзвінків?"}
-    Q1 -->|"так"| HOT
-    Q1 -->|"ні"| Q2{"промах пошуку дорожчий<br/>за незручність?"}
-    Q2 -->|"так — алергени"| HOT
-    Q2 -->|"ні"| Q3{"це поведінка асистента,<br/>а не довідка?"}
-    Q3 -->|"так"| HOT
-    Q3 -->|"ні"| Q4{"росте разом<br/>із бізнесом?"}
-    Q4 -->|"ні"| HOT
-    Q4 -->|"так"| COLD
+    S["A fact from the knowledge"] --> Q1{"asked in<br/>most calls?"}
+    Q1 -->|"yes"| HOT
+    Q1 -->|"no"| Q2{"does a retrieval miss cost<br/>more than inconvenience?"}
+    Q2 -->|"yes — allergens"| HOT
+    Q2 -->|"no"| Q3{"is it behaviour<br/>rather than reference?"}
+    Q3 -->|"yes"| HOT
+    Q3 -->|"no"| Q4{"does it grow<br/>with the business?"}
+    Q4 -->|"no"| HOT
+    Q4 -->|"yes"| COLD
 
-    HOT["HOT<br/>інлайн у системний промпт"]
-    COLD["COLD<br/>Vapi KB + query tool"]
+    HOT["HOT<br/>inlined in the system prompt"]
+    COLD["COLD<br/>knowledge base, via query tool"]
 
     style HOT fill:#2d6a4f,color:#fff
     style COLD fill:#6c757d,color:#fff
