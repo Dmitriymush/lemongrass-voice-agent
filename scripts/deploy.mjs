@@ -25,7 +25,7 @@ let result;
 try {
   result = await deploy({
     assistant: JSON.parse(read("build/assistant.rendered.json")),
-    cold: read("build/kb-cold.txt"),
+    cold: read("kb/generated/kb-cold.txt"),
     env: process.env,
     state: previousState,
   });

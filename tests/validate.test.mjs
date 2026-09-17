@@ -210,4 +210,25 @@ describe("the real build output", () => {
 
     assert.doesNotThrow(() => validateAssistant(assistant));
   });
+
+  test("2.10 the committed knowledge base matches what the fact sheet produces", () => {
+    const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
+    const kbConfig = JSON.parse(read("kb/kb.config.json"));
+
+    const { cold } = buildAssistant({
+      kbConfig,
+      routing: JSON.parse(read("kb/routing.json")),
+      sourceFiles: kbConfig.sources,
+      promptTemplate: read("prompt/system-prompt.md"),
+      summaryPrompt: read("prompt/summary-prompt.md").trim(),
+      assistantConfig: JSON.parse(read("assistant.config.json")),
+      readKbFile: (name) => read(`kb/${name}`),
+    });
+
+    assert.equal(
+      read("kb/generated/kb-cold.txt").trim(),
+      cold.trim(),
+      "the committed document is what Vapi holds; if it no longer matches the fact sheet, the deployed knowledge base has drifted"
+    );
+  });
 });

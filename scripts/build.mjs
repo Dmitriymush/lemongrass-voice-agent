@@ -9,7 +9,7 @@
  *   prompt/*.md           (templates with {{MARKERS}})
  *   assistant.config.json (Vapi config with prompt placeholders)
  *        -> build/assistant.rendered.json   the assistant, hot core inlined
- *        -> build/kb-cold.txt                the document uploaded to the knowledge base
+ *        -> kb/generated/kb-cold.txt                the document uploaded to the knowledge base
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -17,6 +17,10 @@ import { buildAssistant } from "./lib/build-assistant.mjs";
 import { validateAssistant } from "./lib/validate-assistant.mjs";
 
 const at = (p) => new URL(`../${p}`, import.meta.url);
+
+// Committed, not build output: this is the document Vapi actually holds, and the
+// task asks for the knowledge base source as uploaded.
+const COLD_PATH = "kb/generated/kb-cold.txt";
 const read = (p) => readFileSync(at(p), "utf8");
 
 const kbConfig = JSON.parse(read("kb/kb.config.json"));
@@ -36,15 +40,16 @@ const { assistant, cold, stats } = buildAssistant({
 validateAssistant(assistant);
 
 mkdirSync(at("build"), { recursive: true });
+mkdirSync(at("kb/generated"), { recursive: true });
 writeFileSync(at("build/assistant.rendered.json"), JSON.stringify(assistant, null, 2) + "\n");
 // .txt, not .md: Vapi's file pipeline rejects text/markdown — an uploaded .md
 // reaches status "failed" with no error detail, while byte-identical content as
 // text/plain processes in seconds. Verified against the live API.
-writeFileSync(at("build/kb-cold.txt"), cold + "\n");
+writeFileSync(at(COLD_PATH), cold + "\n");
 
 console.log(
   `HOT  ${stats.hotSections} sections + ${stats.allergenLines} allergen line(s), ` +
     `${stats.hotTokens} tokens (cap ${stats.thresholdTokens})`
 );
-console.log(`COLD ${stats.coldSections} section(s), ${stats.coldTokens} tokens -> build/kb-cold.txt`);
+console.log(`COLD ${stats.coldSections} section(s), ${stats.coldTokens} tokens -> ${COLD_PATH}`);
 console.log(`Prompt: ${stats.promptTokens} tokens`);
