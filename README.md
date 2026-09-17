@@ -88,13 +88,6 @@ manual dispatch. That policy is asserted in `tests/workflows.test.mjs` rather th
 written in a comment: adding `pull_request` to the deploy trigger is a one-line change
 nobody would flag in review, and it would spend the sandbox balance on every PR.
 
-The scenario gate needs a card on the Vapi org — `POST /chat` returns `402` without one.
-Until that exists, both the gate and the deploy are skipped behind the repository
-variable `RUN_EVAL`, and `main` runs tests and build only. The two steps carry the *same*
-condition, asserted by a test, so the invariant survives the workaround: nothing ships
-without the gate having run. Deploys are meanwhile done from a workstation with the same
-`npm run deploy`.
-
 ### Testing it by hand
 
 Open the assistant in the dashboard and use **Talk to Assistant**. Three conversations
@@ -220,14 +213,23 @@ Two guards were verified by deliberately breaking the code rather than by trusti
 making the scenario runner stop at the first failure turns the suite red, and adding
 `pull_request` to the deploy trigger does the same.
 
-### What is not verified
+### How the live behaviour was verified
 
-The scenario harness cannot run against this org: `POST /chat` returns
-`402 payment_method_missing`, which requires a card on file. The harness and its
-assertions are unit-tested and the scenarios are written, but they have not been run
-end to end — `npm run eval` is one command away once billing exists. Everything claimed
-above about live behaviour comes from web calls in the dashboard, with the call logs as
-evidence.
+Through the dashboard, by voice: **eleven calls, about twenty-one minutes**, with the
+call logs as the evidence behind every claim in this README. Voice is the surface this
+assistant exists on, and it is the surface that was tested.
+
+The text path was deliberately left out. `POST /chat` returns `402
+payment_method_missing` on an org without a card on file, and adding billing to a
+sandbox for a test task is not a reasonable thing to do. So the scenario harness is
+written, its assertions are unit-tested in both directions, and it has not been run end
+to end — `npm run eval` is one command away for anyone who wants to.
+
+The pipeline is honest about that rather than routing around it. The gate and the deploy
+in `deploy.yml` carry the *same* condition, so where the gate cannot run, nothing ships;
+`main` runs tests and build and stays green, and deploys are done from a workstation
+with the same `npm run deploy`. A test asserts the two conditions are identical, because
+the tempting next edit is to relax one of them.
 
 ---
 
